@@ -14,6 +14,26 @@ smartlab/
 └── firmware/smartlab_cabinet/smartlab_cabinet.ino   Arduino sketch
 ```
 
+## Deploying on Render
+
+The included `render.yaml` configures a public Render web service, builds the React frontend,
+uses Gunicorn for Flask, generates a private `SMARTLAB_SECRET`, and stores SQLite on a persistent
+disk. The persistent disk requires a paid Render service. The cloud service deliberately does not
+start the serial hardware manager: an Arduino connected to your computer is not reachable from
+Render.
+
+1. Push this repository to the GitHub account connected to Render, then create a **Blueprint**
+   in Render using this repository and `render.yaml`. This provisions the web service and disk.
+2. Transfer your existing `backend/cabinet.db` privately to the service's persistent disk at
+   `/var/data/cabinet.db`; do not commit or otherwise publish the database. It may contain student
+   records and password hashes. The app will not start successfully until this file is present.
+3. Deploy or redeploy the service. Render assigns its public URL; sign in with an existing
+   administrator account from the migrated database.
+
+Keep the generated `SMARTLAB_SECRET` private and back up the persistent disk regularly. The
+cloud app can manage records and loans, but RFID scans and latch control require the backend to
+run on a computer connected to the Arduino.
+
 ## 1. Run it (Windows / macOS / Linux)
 
 Requires **Python 3.10+**. Node.js is only needed if you want to change the UI.

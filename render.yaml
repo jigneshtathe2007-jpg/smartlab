@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: smartlab
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r backend/requirements-prod.txt && npm ci --prefix frontend && npm run build --prefix frontend
+    startCommand: gunicorn --chdir backend --bind 0.0.0.0:$PORT --workers 1 --threads 8 --access-logfile - --error-logfile - wsgi:application
+    healthCheckPath: /api/health
+    envVars:
+      - key: SMARTLAB_DB
+        value: /var/data/cabinet.db
+      - key: SMARTLAB_SECRET
+        generateValue: true
+    disk:
+      name: smartlab-data
+      mountPath: /var/data
+      sizeGB: 1

@@ -1,0 +1,37 @@
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets
+.env
+.env.*
+!.env.example
+backend/.secret_key
+
+# Local database and backups
+backend/cabinet.db
+*.db-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Frontend dependencies
+frontend/node_modules/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+# Python runtime files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated frontend build
+frontend/dist/
+
+# Local database files
+backend/*.db
+backend/*.db-*

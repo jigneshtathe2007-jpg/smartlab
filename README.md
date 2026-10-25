@@ -19,8 +19,8 @@ smartlab/
 The included `render.yaml` configures a public **free-tier** Render web service and builds the
 React frontend. It starts with a new, empty SQLite database and generates private application and
 administrator passwords. The free tier has no persistent disk: records can be lost when the
-service restarts or is redeployed. The cloud service does not start the serial hardware manager,
-so an Arduino connected to your computer is not reachable from Render.
+service restarts or is redeployed. Because Render cannot access USB devices, run the included
+hardware connector on the Windows computer that the Arduino is plugged into.
 
 1. Push this repository to the GitHub account connected to Render, then create a **Blueprint**
    in Render using this repository and `render.yaml`.
@@ -29,8 +29,7 @@ so an Arduino connected to your computer is not reachable from Render.
    **Environment** settings and use it to sign in.
 
 Keep the generated passwords private. Do not upload `backend/cabinet.db` to the public repository;
-the cloud demo intentionally does not migrate it. The cloud app can manage records and loans, but
-RFID scans and latch control require the backend to run on a computer connected to the Arduino.
+the cloud demo intentionally does not migrate it.
 
 ## 1. Run it (Windows / macOS / Linux)
 
@@ -103,8 +102,17 @@ external 5 V supply and join its GND to the Uno's GND.
 2. Open `firmware/smartlab_cabinet/smartlab_cabinet.ino`, select *Arduino Uno* and your port, **Upload**.
 3. Adjust `LOCKED_ANGLE` / `UNLOCKED_ANGLE` at the top if your latch needs different angles.
 4. **Close the Arduino Serial Monitor** - only one program can use the port.
-5. Start the backend. It scans serial ports, sends `PING` and only treats a device as connected when it answers
-   `PONG:SMARTLAB`. To force a port: `SMARTLAB_SERIAL_PORT=COM5` (or `/dev/ttyACM0`).
+5. To use the live cloud app, clone or update this repository on the computer connected to the Arduino,
+   install Python 3.10+ if needed, and double-click `backend\run_hardware_bridge.bat`. Enter the
+   SmartLab `admin` password when prompted (get it from the Render service's **Environment**
+   settings). The connector automatically detects the Arduino, verifies the `PONG:SMARTLAB`
+   firmware handshake, and relays RFID scans and authorized latch commands over HTTPS. Keep the
+   connector running while using the hardware. The free Render instance may need time to wake after
+   inactivity. The connector keeps the free web service active while it is running, and asks you
+   to sign in again if its 12-hour session expires.
+
+   To use a local SmartLab backend instead, start the backend as described in *Run it*. It scans
+   serial ports automatically. To force a port: `SMARTLAB_SERIAL_PORT=COM5` (or `/dev/ttyACM0`).
 
 Linux: `sudo usermod -a -G dialout $USER` then log out/in. Windows: install the CH340 driver if you have a clone board.
 

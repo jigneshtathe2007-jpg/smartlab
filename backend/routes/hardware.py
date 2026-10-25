@@ -68,3 +68,16 @@ def manual_unlock():
 @admin_required
 def reconnect():
     return jsonify(hw().reconnect())
+
+
+@bp.post("/hardware/bridge/poll")
+@admin_required
+def bridge_poll():
+    manager = hw()
+    publish = getattr(manager, "publish", None)
+    if publish is None:
+        raise ApiError("Hardware bridge is not enabled on this server", 404)
+    try:
+        return jsonify(publish(body_json()))
+    except ValueError as exc:
+        raise ApiError(str(exc), 422)

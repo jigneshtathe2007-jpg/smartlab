@@ -15,7 +15,7 @@ from utils import ApiError, error_response
 log = logging.getLogger("smartlab")
 
 
-def create_app(db_path=None, start_hardware=True, serial_port=None):
+def create_app(db_path=None, start_hardware=True, serial_port=None, hardware_manager=None):
     app = Flask(__name__, static_folder=None)
     app.config.update(
         DB_PATH=str(db_path or config.DB_PATH),
@@ -35,7 +35,7 @@ def create_app(db_path=None, start_hardware=True, serial_port=None):
     migrate(app.config["DB_PATH"])
     app.teardown_appcontext(close_db)
 
-    hw = HardwareManager(serial_port or config.SERIAL_PORT, config.SERIAL_BAUD, enabled=start_hardware)
+    hw = hardware_manager or HardwareManager(serial_port or config.SERIAL_PORT, config.SERIAL_BAUD, enabled=start_hardware)
     app.extensions["hardware"] = hw
     if start_hardware:
         hw.start()

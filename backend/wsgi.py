@@ -3,10 +3,11 @@ import os
 from werkzeug.security import generate_password_hash
 
 from app import create_app
+from bridge import HardwareRelay
 from db import connect
 from routes.auth_routes import validate_password, validate_username
 
-application = create_app(start_hardware=False)
+application = create_app(start_hardware=False, hardware_manager=HardwareRelay())
 
 conn = connect(application.config["DB_PATH"])
 try:

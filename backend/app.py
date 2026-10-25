@@ -1,5 +1,6 @@
 """SmartLab - RFID Smart Cabinet Management System (Flask backend + static React build)."""
 import logging
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -7,7 +8,7 @@ from pathlib import Path
 from flask import Flask, jsonify, send_from_directory
 
 import config
-from db import close_db, migrate
+from db import close_db, initialize_empty_db, migrate
 from hardware import HardwareManager
 from utils import ApiError, error_response
 
@@ -27,7 +28,10 @@ def create_app(db_path=None, start_hardware=True, serial_port=None):
         JSON_SORT_KEYS=False,
     )
     if not Path(app.config["DB_PATH"]).exists():
-        raise SystemExit(f"Database not found: {app.config['DB_PATH']}\nSet SMARTLAB_DB to your existing SQLite file.")
+        if os.environ.get("SMARTLAB_ALLOW_EMPTY_DB") == "1":
+            initialize_empty_db(app.config["DB_PATH"])
+        else:
+            raise SystemExit(f"Database not found: {app.config['DB_PATH']}\nSet SMARTLAB_DB to your existing SQLite file.")
     migrate(app.config["DB_PATH"])
     app.teardown_appcontext(close_db)
 

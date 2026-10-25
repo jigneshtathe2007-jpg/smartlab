@@ -1,6 +1,7 @@
 """SQLite helpers. Works on the existing database; only additive migrations are applied."""
 import sqlite3
 from contextlib import contextmanager
+from pathlib import Path
 
 from flask import current_app, g
 
@@ -25,6 +26,18 @@ def close_db(_exc=None):
     db = g.pop("db", None)
     if db is not None:
         db.close()
+
+
+def initialize_empty_db(path):
+    """Create the app's empty schema for explicitly opted-in ephemeral deployments."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(path), isolation_level=None)
+    try:
+        schema = Path(__file__).with_name("empty_schema.sql").read_text(encoding="utf-8")
+        conn.executescript(schema)
+    finally:
+        conn.close()
 
 
 @contextmanager

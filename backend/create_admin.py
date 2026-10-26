@@ -18,15 +18,16 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--username")
     args = ap.parse_args()
-    migrate(config.DB_PATH)
+    database = config.DATABASE_URL or config.DB_PATH
+    migrate(database)
     username = args.username or input("Admin username: ").strip()
     validate_username(username)
     pw = getpass.getpass("Password (min 8 chars): ")
     if pw != getpass.getpass("Repeat password: "):
         raise SystemExit("Passwords do not match.")
     validate_password(pw)
-    conn = connect(config.DB_PATH)
-    row = conn.execute("SELECT user_id, role FROM users WHERE username=?", (username,)).fetchone()
+    conn = connect(database)
+    row = conn.execute("SELECT user_id, role FROM users WHERE LOWER(username)=LOWER(?)", (username,)).fetchone()
     if row and row["role"] != "admin":
         raise SystemExit("That username belongs to a student account. Choose another.")
     if row:

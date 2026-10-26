@@ -36,7 +36,7 @@ def login():
     db = get_db()
     row = db.execute(
         """SELECT u.*, s.full_name, s.roll_no FROM users u
-           LEFT JOIN students s ON s.student_id = u.student_id WHERE u.username = ?""",
+           LEFT JOIN students s ON s.student_id = u.student_id WHERE LOWER(u.username) = LOWER(?)""",
         (username,),
     ).fetchone()
     if row is None or not check_password_hash(row["password_hash"], password):
@@ -62,7 +62,7 @@ def register():
     with transaction(db):
         if db.execute("SELECT 1 FROM students WHERE roll_no = ?", (roll_no,)).fetchone():
             raise ApiError("This roll number already exists - ask an administrator to create your login", 409, "roll_no")
-        if db.execute("SELECT 1 FROM users WHERE username = ?", (username,)).fetchone():
+        if db.execute("SELECT 1 FROM users WHERE LOWER(username) = LOWER(?)", (username,)).fetchone():
             raise ApiError("Username is already taken", 409, "username")
         cur = db.execute(
             "INSERT INTO students (roll_no, full_name, department, year_sem, phone, email) VALUES (?,?,?,?,?,?)",

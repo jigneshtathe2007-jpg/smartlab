@@ -10,7 +10,7 @@ bp = Blueprint("students", __name__, url_prefix="/api/students")
 
 LIST_SQL = """
 SELECT s.*, u.username,
-       (u.user_id IS NOT NULL) AS has_login,
+       CASE WHEN u.user_id IS NOT NULL THEN 1 ELSE 0 END AS has_login,
        (SELECT COUNT(*) FROM issues i WHERE i.student_id = s.student_id AND i.returned = 0) AS active_loans,
        (SELECT COUNT(*) FROM issues i WHERE i.student_id = s.student_id AND i.returned = 0
             AND substr(i.expected_return_date,1,10) < :today) AS overdue_loans,
@@ -59,7 +59,7 @@ def list_students():
     if dept:
         where.append("s.department = :dept")
         p["dept"] = dept
-    sql = LIST_SQL + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY s.full_name COLLATE NOCASE"
+    sql = LIST_SQL + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY LOWER(s.full_name)"
     db = get_db()
     depts = [r[0] for r in db.execute("SELECT DISTINCT department FROM students WHERE department IS NOT NULL AND department<>'' ORDER BY 1")]
     return jsonify({"students": rows(db.execute(sql, p)), "departments": depts})
@@ -78,7 +78,7 @@ def create_student():
     db = get_db()
     with transaction(db):
         _check_unique(db, f)
-        if username and db.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone():
+        if username and db.execute("SELECT 1 FROM users WHERE LOWER(username)=LOWER(?)", (username,)).fetchone():
             raise ApiError("Username is already taken", 409, "username")
         cur = db.execute(
             "INSERT INTO students (rfid_uid, roll_no, full_name, department, year_sem, phone, email) VALUES (?,?,?,?,?,?,?)",
@@ -136,7 +136,7 @@ def set_account(sid):
             db.execute("UPDATE users SET password_hash=? WHERE user_id=?", (generate_password_hash(password), existing["user_id"]))
         else:
             username = validate_username(text(data, "username", required=True, max_len=32))
-            if db.execute("SELECT 1 FROM users WHERE username=?", (username,)).fetchone():
+            if db.execute("SELECT 1 FROM users WHERE LOWER(username)=LOWER(?)", (username,)).fetchone():
                 raise ApiError("Username is already taken", 409, "username")
             db.execute("INSERT INTO users (username, password_hash, role, student_id) VALUES (?,?,?,?)",
                        (username, generate_password_hash(password), "student", sid))

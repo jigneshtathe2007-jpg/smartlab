@@ -9,7 +9,7 @@ from routes.auth_routes import validate_password, validate_username
 
 application = create_app(start_hardware=False, hardware_manager=HardwareRelay())
 
-conn = connect(application.config["DB_PATH"])
+conn = connect(application.config["DATABASE_URL"] or application.config["DB_PATH"])
 try:
     user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     if user_count == 0:

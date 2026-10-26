@@ -9,6 +9,8 @@ services:
     envVars:
       - key: SMARTLAB_DB
         value: /tmp/cabinet.db
+      - key: SMARTLAB_DATABASE_URL
+        sync: false
       - key: SMARTLAB_ALLOW_EMPTY_DB
         value: "1"
       - key: SMARTLAB_SECRET

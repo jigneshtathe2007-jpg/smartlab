@@ -19,17 +19,23 @@ smartlab/
 The included `render.yaml` configures a public **free-tier** Render web service and builds the
 React frontend. It starts with a new, empty SQLite database and generates private application and
 administrator passwords. The free tier has no persistent disk: records can be lost when the
-service restarts or is redeployed. Because Render cannot access USB devices, run the included
-hardware connector on the Windows computer that the Arduino is plugged into.
+service restarts or is redeployed. For persistent data, connect a free Neon PostgreSQL database
+using `SMARTLAB_DATABASE_URL`; the app uses that database instead of temporary SQLite. Because
+Render cannot access USB devices, run the included hardware connector on the Windows computer that
+the Arduino is plugged into.
 
-1. Push this repository to the GitHub account connected to Render, then create a **Blueprint**
-   in Render using this repository and `render.yaml`.
-2. Confirm the Blueprint in Render to deploy. On first start, the app creates an empty database
-   and an `admin` account. Find the generated `SMARTLAB_ADMIN_PASSWORD` under the service's
-   **Environment** settings and use it to sign in.
+1. Create a free PostgreSQL project in Neon and copy its connection string.
+2. In this repository's `backend` folder, run `python migrate_sqlite_to_postgres.py`. Paste the
+   Neon connection string when prompted and type `IMPORT` to copy the local `cabinet.db` tables.
+   The command prints row counts only and does not modify the source database. Do not paste the
+   connection string into chat or commit it to Git.
+3. In the Render `smartlab` service, add `SMARTLAB_DATABASE_URL` with the Neon connection string,
+   save the changes, and redeploy. The Render service will then use Neon instead of `/tmp`.
+4. Confirm the site works with the existing account(s) from the imported database. The generated
+   demo `admin` account is only created when the persistent database has no users.
 
 Keep the generated passwords private. Do not upload `backend/cabinet.db` to the public repository;
-the cloud demo intentionally does not migrate it.
+the migration command transfers it directly from your computer to Neon.
 
 ## 1. Run it (Windows / macOS / Linux)
 

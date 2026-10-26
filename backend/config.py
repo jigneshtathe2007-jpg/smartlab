@@ -6,8 +6,9 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
 
-# Your existing SQLite database (students / components / issues / current_status)
+# Local SQLite database; use SMARTLAB_DATABASE_URL for persistent PostgreSQL hosting.
 DB_PATH = Path(os.environ.get("SMARTLAB_DB", BASE_DIR / "cabinet.db"))
+DATABASE_URL = os.environ.get("SMARTLAB_DATABASE_URL")
 
 # Serial port of the Arduino. "auto" = scan all ports and handshake with the firmware.
 SERIAL_PORT = os.environ.get("SMARTLAB_SERIAL_PORT", "auto")

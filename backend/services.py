@@ -36,7 +36,7 @@ def mask_component(row, user):
     return d
 
 
-def fetch_components(db, where="", params=None, user=None, order="c.name COLLATE NOCASE"):
+def fetch_components(db, where="", params=None, user=None, order="LOWER(c.name)"):
     user = user or g.user
     p = {"today": today_str()}
     p.update(params or {})

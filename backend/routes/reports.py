@@ -19,8 +19,8 @@ def _daterange(days):
 
 def _daily(db, days, extra="", params=None):
     p = {"since": _daterange(days)[0], **(params or {})}
-    issued = dict(db.execute(f"SELECT date(issue_date,'localtime') d, COUNT(*) FROM issues i WHERE date(issue_date,'localtime') >= :since {extra} GROUP BY d", p).fetchall())
-    returned = dict(db.execute(f"SELECT date(actual_return_date,'localtime') d, COUNT(*) FROM issues i WHERE returned=1 AND date(actual_return_date,'localtime') >= :since {extra} GROUP BY d", p).fetchall())
+    issued = {row[0]: row[1] for row in db.execute(f"SELECT date(issue_date,'localtime') d, COUNT(*) FROM issues i WHERE date(issue_date,'localtime') >= :since {extra} GROUP BY d", p).fetchall()}
+    returned = {row[0]: row[1] for row in db.execute(f"SELECT date(actual_return_date,'localtime') d, COUNT(*) FROM issues i WHERE returned=1 AND date(actual_return_date,'localtime') >= :since {extra} GROUP BY d", p).fetchall()}
     return [{"date": d, "issued": issued.get(d, 0), "returned": returned.get(d, 0)} for d in _daterange(days)]
 
 
@@ -35,7 +35,7 @@ def dashboard():
                   CASE WHEN substr(i.expected_return_date,1,10) < :today THEN 1 ELSE 0 END AS overdue
            FROM issues i JOIN components c ON c.component_id=i.component_id
            WHERE i.returned=0 ORDER BY i.expected_return_date LIMIT 8""", {"today": today}))
-    status_counts = dict(db.execute("SELECT status, COUNT(*) FROM components GROUP BY status").fetchall())
+    status_counts = {row[0]: row[1] for row in db.execute("SELECT status, COUNT(*) FROM components GROUP BY status").fetchall()}
     base = {"status_counts": {k: status_counts.get(k, 0) for k in ("AVAILABLE", "ISSUED", "DAMAGED", "LOST")},
             "components_total": sum(status_counts.values()), "upcoming_returns": upcoming}
     if not is_admin():
@@ -72,11 +72,13 @@ def summary():
     since = _daterange(days)[0]
     p = {"since": since, "today": today}
     one = lambda sql: db.execute(sql, p).fetchone()
-    total, = one("SELECT COUNT(*) FROM issues WHERE date(issue_date,'localtime') >= :since")
-    ret_n, avg_days, on_time = one(
+    total_row = one("SELECT COUNT(*) FROM issues WHERE date(issue_date,'localtime') >= :since")
+    total = total_row[0]
+    summary_row = one(
         """SELECT COUNT(*), AVG(julianday(actual_return_date) - julianday(issue_date)),
                   SUM(CASE WHEN date(actual_return_date,'localtime') <= substr(expected_return_date,1,10) THEN 1 ELSE 0 END)
            FROM issues WHERE returned=1 AND date(actual_return_date,'localtime') >= :since""")
+    ret_n, avg_days, on_time = (summary_row[i] for i in range(3))
     top_components = rows(db.execute(
         """SELECT c.name, COUNT(*) AS loans FROM issues i JOIN components c ON c.component_id=i.component_id
            WHERE date(i.issue_date,'localtime') >= :since GROUP BY c.component_id ORDER BY loans DESC, c.name LIMIT 8""", p))

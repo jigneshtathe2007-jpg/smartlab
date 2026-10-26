@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from flask import Flask, jsonify, send_from_directory
+import psycopg
 
 import config
 from db import close_db, initialize_empty_db, migrate
@@ -19,6 +20,7 @@ def create_app(db_path=None, start_hardware=True, serial_port=None, hardware_man
     app = Flask(__name__, static_folder=None)
     app.config.update(
         DB_PATH=str(db_path or config.DB_PATH),
+        DATABASE_URL=config.DATABASE_URL,
         SECRET_KEY=config.load_secret_key(),
         TOKEN_TTL_SECONDS=config.TOKEN_TTL_SECONDS,
         MAX_LOAN_DAYS=config.MAX_LOAN_DAYS,
@@ -27,12 +29,15 @@ def create_app(db_path=None, start_hardware=True, serial_port=None, hardware_man
         UNLOCK_SECONDS=config.UNLOCK_SECONDS,
         JSON_SORT_KEYS=False,
     )
-    if not Path(app.config["DB_PATH"]).exists():
-        if os.environ.get("SMARTLAB_ALLOW_EMPTY_DB") == "1":
-            initialize_empty_db(app.config["DB_PATH"])
-        else:
-            raise SystemExit(f"Database not found: {app.config['DB_PATH']}\nSet SMARTLAB_DB to your existing SQLite file.")
-    migrate(app.config["DB_PATH"])
+    if app.config["DATABASE_URL"]:
+        migrate(app.config["DATABASE_URL"])
+    else:
+        if not Path(app.config["DB_PATH"]).exists():
+            if os.environ.get("SMARTLAB_ALLOW_EMPTY_DB") == "1":
+                initialize_empty_db(app.config["DB_PATH"])
+            else:
+                raise SystemExit(f"Database not found: {app.config['DB_PATH']}\nSet SMARTLAB_DB to your existing SQLite file.")
+        migrate(app.config["DB_PATH"])
     app.teardown_appcontext(close_db)
 
     hw = hardware_manager or HardwareManager(serial_port or config.SERIAL_PORT, config.SERIAL_BAUD, enabled=start_hardware)
@@ -59,6 +64,16 @@ def create_app(db_path=None, start_hardware=True, serial_port=None, hardware_man
 
     @app.errorhandler(sqlite3.OperationalError)
     def _operational(e):
+        log.exception("Database error")
+        return error_response("Database is busy or unavailable, please retry", 503)
+
+    @app.errorhandler(psycopg.IntegrityError)
+    def _postgres_integrity(e):
+        log.warning("Database integrity error: %s", e)
+        return error_response("That change conflicts with existing data (duplicate or in use)", 409)
+
+    @app.errorhandler(psycopg.OperationalError)
+    def _postgres_operational(e):
         log.exception("Database error")
         return error_response("Database is busy or unavailable, please retry", 503)
 

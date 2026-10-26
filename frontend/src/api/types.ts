@@ -50,3 +50,8 @@ export interface ScanEvent { id: number; uid: string; ts: number; source: 'reade
 
 export interface TrendPoint { date: string; issued: number; returned: number }
 export interface NameValue { name: string; value: number }
+
+export interface ActivityEvent {
+  activity_id: number; actor_user_id: number | null; actor_name: string; actor_username: string; actor_role: Role
+  action: string; entity_type: string; entity_id: number | null; entity_name: string; created_at: string
+}

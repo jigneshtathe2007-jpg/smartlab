@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { AlertTriangle, BarChart3, Boxes, Clock, History, KeyRound, LayoutDashboard, LogOut, Menu, Radio, ScanLine, Users, Wifi, WifiOff, X } from 'lucide-react'
+import { Activity, AlertTriangle, BarChart3, Boxes, Clock, History, KeyRound, LayoutDashboard, LogOut, Menu, Radio, ScanLine, Users, Wifi, WifiOff, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useHardware } from '../context/HardwareContext'
 import { useToast } from '../context/ToastContext'
@@ -16,6 +16,7 @@ const NAV = [
   { to: '/overdue', label: 'Overdue', icon: AlertTriangle },
   { to: '/history', label: 'History', icon: History },
   { to: '/reports', label: 'Reports', icon: BarChart3, admin: true },
+  { to: '/activity', label: 'Activity log', icon: Activity, admin: true },
 ]
 
 export function HardwarePill() {

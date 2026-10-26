@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config
@@ -128,6 +129,28 @@ class TestSmartLab(Base):
         lk = self.c.get("/api/lookup/11AA22BB", headers=admin).get_json()
         self.assertEqual(lk["resolved"]["type"], "component")
         self.assertEqual(self.c.get("/api/lookup/FFFFFFFF", headers=admin).get_json()["resolved"]["type"], "unknown")
+
+    def test_05_activity_audit(self):
+        admin = self.login("admin", "adminpass1")
+        self.assertEqual(self.c.get("/api/activity").status_code, 401)
+        student = self.login("stu1", "studentpw1")
+        self.assertEqual(self.c.get("/api/activity", headers=student).status_code, 403)
+
+        created = self.c.post(
+            "/api/components",
+            headers=admin,
+            json={"rfid_uid": "a0d17001", "name": "Audit Test Component", "category": "Test"},
+        )
+        self.assertEqual(created.status_code, 201, created.get_json())
+        with patch.object(self.app.extensions["hardware"], "unlock", return_value={"ok": True, "message": "unlocked"}):
+            opened = self.c.post("/api/hardware/unlock", headers=admin, json={})
+        self.assertEqual(opened.status_code, 200, opened.get_json())
+
+        events = self.c.get("/api/activity?search=Audit%20Test%20Component", headers=admin).get_json()
+        self.assertEqual(events["total"], 1)
+        self.assertEqual(events["events"][0]["action"], "created")
+        self.assertEqual(events["events"][0]["actor_username"], "admin")
+        self.assertEqual(events["opened"], 1)
 
 
 if __name__ == "__main__":

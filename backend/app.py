@@ -45,8 +45,8 @@ def create_app(db_path=None, start_hardware=True, serial_port=None, hardware_man
     if start_hardware:
         hw.start()
 
-    from routes import auth_routes, components, hardware as hw_routes, issues, reports, students
-    for mod in (auth_routes, students, components, issues, hw_routes, reports):
+    from routes import activity, auth_routes, components, hardware as hw_routes, issues, reports, students
+    for mod in (auth_routes, students, components, issues, hw_routes, reports, activity):
         app.register_blueprint(mod.bp)
 
     @app.get("/api/health")

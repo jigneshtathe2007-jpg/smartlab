@@ -36,6 +36,19 @@ CREATE TABLE issues (
     FOREIGN KEY (student_id) REFERENCES students(student_id)
 );
 
+CREATE TABLE activity_logs (
+    activity_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_user_id INTEGER,
+    actor_name TEXT NOT NULL,
+    actor_username TEXT NOT NULL,
+    actor_role TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id INTEGER,
+    entity_name TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE VIEW current_status AS
 SELECT c.component_id, c.rfid_uid, c.name, c.status,
        s.full_name AS issued_to, s.roll_no, i.expected_return_date

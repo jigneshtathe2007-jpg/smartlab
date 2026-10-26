@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash
 from auth import admin_required
 from db import get_db, transaction
 from routes.auth_routes import validate_password, validate_username
+from services import log_activity
 from utils import (ApiError, body_json, int_arg, normalize_uid, optional_email, optional_phone, rows, text, today_str)
 
 bp = Blueprint("students", __name__, url_prefix="/api/students")
@@ -88,6 +89,7 @@ def create_student():
         if username:
             db.execute("INSERT INTO users (username, password_hash, role, student_id) VALUES (?,?,?,?)",
                        (username, generate_password_hash(password), "student", sid))
+        log_activity(db, "created", "student", sid, f["full_name"])
     return jsonify({"student": _one(db, sid)}), 201
 
 
@@ -104,6 +106,7 @@ def update_student(sid):
             "UPDATE students SET rfid_uid=?, roll_no=?, full_name=?, department=?, year_sem=?, phone=?, email=? WHERE student_id=?",
             (f["rfid_uid"], f["roll_no"], f["full_name"], f["department"], f["year_sem"], f["phone"], f["email"], sid),
         )
+        log_activity(db, "updated", "student", sid, f["full_name"])
     return jsonify({"student": _one(db, sid)})
 
 
@@ -112,12 +115,14 @@ def update_student(sid):
 def delete_student(sid):
     db = get_db()
     with transaction(db):
-        if not db.execute("SELECT 1 FROM students WHERE student_id=?", (sid,)).fetchone():
+        student = db.execute("SELECT full_name FROM students WHERE student_id=?", (sid,)).fetchone()
+        if not student:
             raise ApiError("Student not found", 404)
         if db.execute("SELECT 1 FROM issues WHERE student_id=? LIMIT 1", (sid,)).fetchone():
             raise ApiError("This student has borrowing history and cannot be deleted", 409)
         db.execute("DELETE FROM users WHERE student_id=?", (sid,))
         db.execute("DELETE FROM students WHERE student_id=?", (sid,))
+        log_activity(db, "deleted", "student", sid, student["full_name"])
     return jsonify({"ok": True})
 
 
@@ -134,10 +139,14 @@ def set_account(sid):
         existing = db.execute("SELECT user_id FROM users WHERE student_id=?", (sid,)).fetchone()
         if existing:
             db.execute("UPDATE users SET password_hash=? WHERE user_id=?", (generate_password_hash(password), existing["user_id"]))
+            action = "password_reset"
         else:
             username = validate_username(text(data, "username", required=True, max_len=32))
             if db.execute("SELECT 1 FROM users WHERE LOWER(username)=LOWER(?)", (username,)).fetchone():
                 raise ApiError("Username is already taken", 409, "username")
             db.execute("INSERT INTO users (username, password_hash, role, student_id) VALUES (?,?,?,?)",
                        (username, generate_password_hash(password), "student", sid))
+            action = "account_created"
+        student = db.execute("SELECT full_name FROM students WHERE student_id=?", (sid,)).fetchone()
+        log_activity(db, action, "account", sid, student["full_name"])
     return jsonify({"student": _one(db, sid)})

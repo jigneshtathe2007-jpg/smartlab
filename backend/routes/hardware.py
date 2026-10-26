@@ -2,7 +2,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from auth import admin_required, is_admin, login_required
 from db import get_db
-from services import get_component
+from services import get_component, log_activity
 from utils import ApiError, body_json, int_arg, normalize_uid
 
 bp = Blueprint("hardware", __name__, url_prefix="/api")
@@ -61,6 +61,8 @@ def manual_unlock():
     data = body_json()
     seconds = min(max(int_arg(data.get("seconds"), "seconds", current_app.config["UNLOCK_SECONDS"]), 1), 30)
     res = hw().unlock(seconds)
+    if res["ok"]:
+        log_activity(get_db(), "opened", "cabinet", None, "RFID Cabinet")
     return jsonify(res), (200 if res["ok"] else 503)
 
 

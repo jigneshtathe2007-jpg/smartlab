@@ -190,6 +190,21 @@ def migrate(path):
                    FOREIGN KEY (student_id) REFERENCES students(student_id)
                )"""
         )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS activity_logs (
+                   activity_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   actor_user_id INTEGER,
+                   actor_name TEXT NOT NULL,
+                   actor_username TEXT NOT NULL,
+                   actor_role TEXT NOT NULL,
+                   action TEXT NOT NULL,
+                   entity_type TEXT NOT NULL,
+                   entity_id INTEGER,
+                   entity_name TEXT NOT NULL,
+                   created_at TEXT DEFAULT CURRENT_TIMESTAMP
+               )"""
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at, activity_id)")
         try:
             conn.execute(
                 "CREATE UNIQUE INDEX IF NOT EXISTS uq_issues_one_open_per_component "

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { PageLoader } from './components/ui'
 import { useAuth } from './context/AuthContext'
+import Activity from './pages/Activity'
 import Components from './pages/Components'
 import Dashboard from './pages/Dashboard'
 import Loans from './pages/Loans'
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="overdue" element={<Loans mode="overdue" />} />
         <Route path="history" element={<Loans mode="history" />} />
         <Route path="reports" element={isAdmin ? <Reports /> : <Navigate to="/" replace />} />
+        <Route path="activity" element={isAdmin ? <Activity /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

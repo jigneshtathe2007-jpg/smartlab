@@ -3,6 +3,26 @@ from flask import g
 
 from utils import today_str
 
+
+def log_activity(db, action, entity_type, entity_id, entity_name, actor=None):
+    actor = dict(actor or g.user)
+    db.execute(
+        """INSERT INTO activity_logs
+           (actor_user_id, actor_name, actor_username, actor_role, action, entity_type, entity_id, entity_name)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            actor["user_id"],
+            actor.get("full_name") or actor["username"],
+            actor["username"],
+            actor["role"],
+            action,
+            entity_type,
+            entity_id,
+            entity_name,
+        ),
+    )
+
+
 COMPONENT_SELECT = """
 SELECT c.component_id, c.rfid_uid, c.name, c.category, c.description, c.shelf_location, c.status, c.added_at,
        i.issue_id, i.issue_date, i.expected_return_date, i.purpose AS loan_purpose,

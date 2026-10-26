@@ -3,6 +3,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from auth import (check_rate_limit, clear_failures, login_required, make_token, record_failure)
 from db import get_db, transaction
+from services import log_activity
 from utils import (ApiError, USERNAME_RE, body_json, optional_email, optional_phone, text)
 
 bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -43,6 +44,7 @@ def login():
         record_failure(key)
         raise ApiError("Incorrect username or password", 401)
     clear_failures(key)
+    log_activity(db, "signed_in", "session", None, "SmartLab", dict(row))
     return jsonify({"token": make_token(row["user_id"]), "user": _user_payload(row)})
 
 
@@ -72,6 +74,14 @@ def register():
             "INSERT INTO users (username, password_hash, role, student_id) VALUES (?,?,?,?)",
             (username, generate_password_hash(password), "student", cur.lastrowid),
         ).lastrowid
+        log_activity(
+            db,
+            "created",
+            "student",
+            cur.lastrowid,
+            full_name,
+            {"user_id": uid, "username": username, "role": "student", "full_name": full_name},
+        )
     row = db.execute(
         "SELECT u.*, s.full_name, s.roll_no FROM users u LEFT JOIN students s ON s.student_id=u.student_id WHERE u.user_id=?",
         (uid,),

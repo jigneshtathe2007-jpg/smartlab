@@ -4,18 +4,20 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from auth import is_admin, login_required
 from db import get_db, transaction
-from services import ISSUE_SELECT, fetch_issue
+from services import ISSUE_SELECT, fetch_issue, log_activity
 from utils import ApiError, body_json, int_arg, normalize_uid, parse_date, text, today_str
 
 bp = Blueprint("issues", __name__, url_prefix="/api/issues")
 
 
-def _hardware_unlock(data):
+def _hardware_unlock(data, db):
     """Only called AFTER the database transaction committed. Reports the real outcome."""
     if not data.get("unlock"):
         return {"requested": False, "ok": False, "message": "Cabinet unlock not requested"}
     hw = current_app.extensions["hardware"]
     res = hw.unlock(current_app.config["UNLOCK_SECONDS"])
+    if res["ok"]:
+        log_activity(db, "opened", "cabinet", None, "RFID Cabinet")
     return {"requested": True, **res}
 
 
@@ -124,7 +126,8 @@ def borrow():
         if upd.rowcount != 1:
             raise ApiError("Inventory changed while processing - please retry", 409)
         issue_id = cur.lastrowid
-    hardware = _hardware_unlock(data)
+        log_activity(db, "borrowed", "loan", issue_id, f"{comp['name']} -> {student['full_name']}")
+    hardware = _hardware_unlock(data, db)
     return jsonify({"issue": fetch_issue(db, issue_id), "hardware": hardware}), 201
 
 
@@ -165,5 +168,8 @@ def return_component():
         db.execute("UPDATE components SET status=? WHERE component_id=?",
                    ("DAMAGED" if condition == "DAMAGED" else "AVAILABLE", issue["component_id"]))
         issue_id = issue["issue_id"]
-    hardware = _hardware_unlock(data)
+        component = db.execute("SELECT name FROM components WHERE component_id=?", (issue["component_id"],)).fetchone()
+        student = db.execute("SELECT full_name FROM students WHERE student_id=?", (issue["student_id"],)).fetchone()
+        log_activity(db, "returned", "loan", issue_id, f"{component['name']} <- {student['full_name']}")
+    hardware = _hardware_unlock(data, db)
     return jsonify({"issue": fetch_issue(db, issue_id), "hardware": hardware})

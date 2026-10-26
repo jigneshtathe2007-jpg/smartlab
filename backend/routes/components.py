@@ -2,7 +2,7 @@ from flask import Blueprint, g, jsonify, request
 
 from auth import admin_required, login_required
 from db import get_db, transaction
-from services import fetch_components, get_component
+from services import fetch_components, get_component, log_activity
 from utils import ApiError, body_json, normalize_uid, text
 
 bp = Blueprint("components", __name__, url_prefix="/api/components")
@@ -62,6 +62,7 @@ def create_component():
             "INSERT INTO components (rfid_uid, name, category, description, shelf_location, status) VALUES (?,?,?,?,?, 'AVAILABLE')",
             (f["rfid_uid"], f["name"], f["category"], f["description"], f["shelf_location"]),
         )
+        log_activity(db, "created", "component", cur.lastrowid, f["name"])
     return jsonify({"component": get_component(db, cur.lastrowid)}), 201
 
 
@@ -91,6 +92,7 @@ def update_component(cid):
             "UPDATE components SET rfid_uid=?, name=?, category=?, description=?, shelf_location=?, status=? WHERE component_id=?",
             (f["rfid_uid"], f["name"], f["category"], f["description"], f["shelf_location"], status, cid),
         )
+        log_activity(db, "updated", "component", cid, f["name"])
     return jsonify({"component": get_component(db, cid)})
 
 
@@ -99,9 +101,11 @@ def update_component(cid):
 def delete_component(cid):
     db = get_db()
     with transaction(db):
-        if not db.execute("SELECT 1 FROM components WHERE component_id=?", (cid,)).fetchone():
+        component = db.execute("SELECT name FROM components WHERE component_id=?", (cid,)).fetchone()
+        if not component:
             raise ApiError("Component not found", 404)
         if db.execute("SELECT 1 FROM issues WHERE component_id=? LIMIT 1", (cid,)).fetchone():
             raise ApiError("This component has borrowing history and cannot be deleted. Mark it LOST or DAMAGED instead.", 409)
         db.execute("DELETE FROM components WHERE component_id=?", (cid,))
+        log_activity(db, "deleted", "component", cid, component["name"])
     return jsonify({"ok": True})
